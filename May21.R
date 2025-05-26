@@ -86,7 +86,7 @@ TBP_eval <- val_data %>%
 
 mean(TBP_eval$predicted_benefit)
 
-#### Some clinical way to determine what the benefit threshold would be? 
+#### Some clinical way to determine what the benefit threshold would be? ####
 
 #### Lets say D = 0.001
 range(TBP_eval$predicted_benefit)
@@ -193,7 +193,7 @@ TBP_threshold <- seq(0.001, 0.045, by = 0.001)
 nb_results <- net_benefit(TBP_eval, TBP_threshold)
 print(nb_results)
 
-TBP_threshold_Zoomed <- seq(0.001, 0.004, by = 0.00001)
+TBP_threshold_Zoomed <- seq(0.001, 0.00125, by = 0.000001)
 nb_results_Zoomed <- net_benefit(TBP_eval, TBP_threshold_Zoomed)
 print(nb_results_Zoomed)
 
@@ -212,4 +212,103 @@ p_zoomed <- ggplot(nb_results_Zoomed, aes(x = threshold)) +
   labs(y = "Net Benefit", x = "Threshold", color = "Strategy") 
 
 p_all + p_zoomed
+
+
+
+
+
+
+#### Mohsen code (2025.05.21) ####
+
+calc_nb <- function(T)
+  
+{
+  
+  TBP_eval$t <- as.numeric(TBP_eval$treatment_received) # RCT assignment 
+  
+  p_treat <- mean(TBP_eval$t) # proportion of people treated following RCT assginment 
+  
+  ATE <- sum(TBP_eval$t*TBP_eval$observed_event)/sum(TBP_eval$t) - sum((1-TBP_eval$t)*TBP_eval$observed_event)/sum(1-TBP_eval$t) ## E[Y | A = 1] - E[Y | A = 0]
+  
+  treated <- TBP_eval[which(TBP_eval$predicted_benefit>=T),] ## returns the rows from the satisfied condition that model says should be treated 
+  
+  ATT <- sum(treated$t * treated$observed_event)/sum(treated$t) # = E[Y | A = 1, Rz = 1] Among Rz = 1, 
+  # this gives the proportion who received treatment in the RCT (A = 1) and actually developed the outcome (Y = 1), 
+  # divided by total number treated in that group
+  
+      - sum((1-treated$t)*treated$observed_event)/sum(1-treated$t) # = E[Y | A = 0, Rz = 1]  
+  # Among Rz = 1 this gives the proportion who did not receive treatment (A = 0) and developed the outcome, 
+  # divided by total number untreated in that group
+  
+  c(NB_none=0, NB_model=p_treat*(ATT-T), NB_all=ATE-T) 
+  
+}
+
+Ts <- (0:100)/1000
+
+res <- matrix(NA, nrow=length(Ts), ncol=3)
+
+for(i in 1:length(Ts))
+  
+{
+  
+  res[i,] <- calc_nb(Ts[i])
+  
+}
+
+plot(Ts, res[,2], type='l', col='red'); lines(Ts, res[,3])
+
+
+### End: Mohsen code
+
+## Trying the plug-in estimator including the congruent people (2025.05.26)
+
+calc_nb_2 <- function(T) {
+  
+  TBP_eval$t <- as.numeric(TBP_eval$treatment_received)  # RCT assignment (A)
+  
+  EY_A0 <- mean(TBP_eval$observed_event[which(TBP_eval$t == 0)])  # E[Y | A = 0] average outcome among those not treated in RCT
+  
+  TBP_eval$Rz <- as.numeric(TBP_eval$predicted_benefit >= T)  # Rz: model recommendation
+  
+  EY_ARz <- mean(TBP_eval$observed_event[which(TBP_eval$t == TBP_eval$Rz)])  # E[Y | A = Rz]
+  
+  p_treat <- mean(TBP_eval$Rz)  # Pr(Rz = 1) proportion of people whom the model recommends treatment
+  
+  NB_model <- EY_A0 - EY_ARz - T * p_treat # Final output using NB_z formula
+  
+  # NB_all
+  EY_A1 <- mean(TBP_eval$observed_event[which(TBP_eval$t == 1)])  # E[Y | A = 1]
+  ATE <- EY_A0 - EY_A1
+  NB_all <- ATE - T
+  
+  c(NB_none = 0, NB_model = NB_model, NB_all = NB_all)
+}
+
+
+Ts <- (0:100)/1000
+
+res <- matrix(NA, nrow=length(Ts), ncol=3)
+
+for(i in 1:length(Ts))
+  
+{
+  
+  res[i,] <- calc_nb(Ts[i])
+  
+}
+
+plot(Ts, res[,2], type='l', col='red'); lines(Ts, res[,3])
+
+
+
+
+
+
+
+
+
+
+
+
 
