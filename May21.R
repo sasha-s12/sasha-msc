@@ -301,11 +301,10 @@ for(i in 1:length(Ts))
 plot(Ts, res[,2], type='l', col='red'); lines(Ts, res[,3])
 
 
-
 plot(Ts, res[,2], type = 'l', col = 'red',
      xlim = c(0, 0.01), 
-     ylim = c(-0.1, 0.05))     # <- Set y-axis zoom
-lines(Ts, res[,3], col = 'black')  # Add second curve
+     ylim = c(-0.1, 0.05))     
+lines(Ts, res[,3], col = 'black') 
 
 
 
