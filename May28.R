@@ -82,11 +82,11 @@ calc_nb <- function(T,TBP_eval)
   
   treated <- TBP_eval[which(TBP_eval$predicted_benefit>=T),] ## returns the rows from the satisfied condition that model says should be treated 
   
-  ATT <- sum(treated$t * treated$observed_event)/sum(treated$t) # = E[Y | A = 1, Rz = 1] Among Rz = 1, 
+  ATT <- (sum(treated$t * treated$observed_event)/sum(treated$t) - # = E[Y | A = 1, Rz = 1] Among Rz = 1, 
   # this gives the proportion who received treatment in the RCT (A = 1) and actually developed the outcome (Y = 1), 
   # divided by total number treated in that group
   
-  - sum((1-treated$t)*treated$observed_event)/sum(1-treated$t) # = E[Y | A = 0, Rz = 1]  
+  sum((1-treated$t)*treated$observed_event)/sum(1-treated$t)) # = E[Y | A = 0, Rz = 1]  
   # Among Rz = 1 this gives the proportion who did not receive treatment (A = 0) and developed the outcome, 
   # divided by total number untreated in that group
   
@@ -166,7 +166,7 @@ upper_band_all <- apply(nb_boot_all, 2, quantile, probs = 0.975)
 
 
 plot(Ts, res[, 2], type = "l", col = "red", lwd = 2,
-     ylim = c(-0.2, 1.23),
+     ylim = c(-1, 0.45),
      ylab = "Net Benefit", xlab = "Threshold")
 
 #NB_model
