@@ -373,6 +373,7 @@ lines(Ts, lower_band_all, col = "blue", lty = 2)
 lines(Ts, upper_band_all, col = "blue", lty = 2)
 
 
+
 hist(apply(nb_boot_all, 1, mean))
 
 
