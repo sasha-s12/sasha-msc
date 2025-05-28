@@ -306,12 +306,74 @@ plot(Ts, res[,2], type = 'l', col = 'red',
      ylim = c(-0.1, 0.05))     
 lines(Ts, res[,3], col = 'black') 
 
+#### Attempting Bootstrapped Confidence Bands 05.27.2024 ####
+
+B <- 1000 # number of iterations
+
+Ts <- (0:100)/1000  # vector of thresholds 
+
+nb_boot_model <- matrix(NA, nrow = B, ncol = length(Ts))
+nb_boot_all <- matrix(NA, nrow = B, ncol = length(Ts))
+
+for (b in 1:B) {
+  
+  val_data_boot <- val_data[sample(nrow(val_data), replace = TRUE), ] # Resampling from the number of rows in val_data
+  
+  # Computing counterfactual predictions
+  val_data_SKA <- val_data_boot
+  val_data_SKA$trt <- factor(0, levels = c(0, 1))
+  
+  val_data_TPA <- val_data_boot
+  val_data_TPA$trt <- factor(1, levels = c(0, 1))
+  
+  pred_mort_SKA <- predict(TBP_model, newdata = val_data_SKA, type = "response")
+  pred_mort_TPA <- predict(TBP_model, newdata = val_data_TPA, type = "response")
+  
+  val_data_boot$TBP <- pred_mort_SKA - pred_mort_TPA
+  val_data_boot$pred_mort_SKA <- pred_mort_SKA
+  val_data_boot$pred_mort_TPA <- pred_mort_TPA
+  
+  TBP_eval <- val_data_boot %>%
+    select(
+      treatment_received = trt_true,
+      observed_event = Y,
+      risk_TPA = pred_mort_TPA,
+      risk_SKA = pred_mort_SKA,
+      predicted_benefit = TBP
+    )
+  
+  # Computing NB_model and NB_all at each threshold
+  for (i in 1:length(Ts)) {
+    T_val <- Ts[i]
+    nb <- calc_nb(T_val)
+    nb_boot_model[b, i] <- nb["NB_model"]
+    nb_boot_all[b, i] <- nb["NB_all"]
+  }
+}
+
+# 95% confidence bands
+lower_band_model <- apply(nb_boot_model, 2, quantile, probs = 0.025, na.rm = TRUE)
+upper_band_model <- apply(nb_boot_model, 2, quantile, probs = 0.975, na.rm = TRUE)
+
+lower_band_all <- apply(nb_boot_all, 2, quantile, probs = 0.025)
+upper_band_all <- apply(nb_boot_all, 2, quantile, probs = 0.975)
 
 
+plot(Ts, res[, 2], type = "l", col = "red", lwd = 2,
+     ylim = c(-1.0, 0.3),
+     ylab = "Net Benefit", xlab = "Threshold")
+
+#NB_model
+lines(Ts, lower_band_model, col = "red", lty = 2)
+lines(Ts, upper_band_model, col = "red", lty = 2)
+
+# NB_all 
+lines(Ts, res[, 3], col = "blue", lwd = 2)
+lines(Ts, lower_band_all, col = "blue", lty = 2)
+lines(Ts, upper_band_all, col = "blue", lty = 2)
 
 
-
-
+hist(apply(nb_boot_all, 1, mean))
 
 
 
