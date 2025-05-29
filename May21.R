@@ -351,6 +351,8 @@ for (b in 1:B) {
   }
 }
 
+
+
 # 95% confidence bands
 lower_band_model <- apply(nb_boot_model, 2, quantile, probs = 0.025, na.rm = TRUE)
 upper_band_model <- apply(nb_boot_model, 2, quantile, probs = 0.975, na.rm = TRUE)
@@ -360,7 +362,7 @@ upper_band_all <- apply(nb_boot_all, 2, quantile, probs = 0.975)
 
 
 plot(Ts, res[, 2], type = "l", col = "red", lwd = 2,
-     ylim = c(-1.0, 0.3),
+     ylim = c(-0.2, 1.23),
      ylab = "Net Benefit", xlab = "Threshold")
 
 #NB_model

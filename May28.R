@@ -1,3 +1,4 @@
+
 set.seed(123)
 
 library(predtools)
@@ -70,7 +71,7 @@ mean(TBP_eval$predicted_benefit)
 
 #### Mohsen code (2025.05.21) ####
 
-calc_nb <- function(T,TBP_eval)
+calc_nb <- function(T , TBP_eval)
   
   {
   
@@ -78,7 +79,7 @@ calc_nb <- function(T,TBP_eval)
   
   p_treat <- mean(TBP_eval$t) # proportion of people treated following RCT assginment 
   
-  ATE <- sum(TBP_eval$t*TBP_eval$observed_event)/sum(TBP_eval$t) - sum((1-TBP_eval$t)*TBP_eval$observed_event)/sum(1-TBP_eval$t) ## E[Y | A = 1] - E[Y | A = 0]
+  ATE <- (sum(TBP_eval$t*TBP_eval$observed_event)/sum(TBP_eval$t) - sum((1-TBP_eval$t)*TBP_eval$observed_event)/sum(1-TBP_eval$t)) ## E[Y | A = 1] - E[Y | A = 0]
   
   treated <- TBP_eval[which(TBP_eval$predicted_benefit>=T),] ## returns the rows from the satisfied condition that model says should be treated 
   
@@ -116,7 +117,7 @@ plot(Ts, res[,2], type='l', col='red'); lines(Ts, res[,3])
 
 B <- 1000 # number of iterations
 
-Ts <- (0:100)/1000  # vector of thresholds 
+Ts <- (0:100)/100000  # vector of thresholds 
 
 nb_boot_model <- matrix(NA, nrow = B, ncol = length(Ts))
 nb_boot_all <- matrix(NA, nrow = B, ncol = length(Ts))
@@ -166,7 +167,7 @@ upper_band_all <- apply(nb_boot_all, 2, quantile, probs = 0.975)
 
 
 plot(Ts, res[, 2], type = "l", col = "red", lwd = 2,
-     ylim = c(-1, 0.45),
+     ylim = c(-0.5, 0.09),
      ylab = "Net Benefit", xlab = "Threshold")
 
 #NB_model
@@ -177,10 +178,27 @@ lines(Ts, upper_band_model, col = "red", lty = 2)
 lines(Ts, res[, 3], col = "blue", lwd = 2)
 lines(Ts, lower_band_all, col = "blue", lty = 2)
 lines(Ts, upper_band_all, col = "blue", lty = 2)
-
-
+ 
+hist(TBP_eval[,5])
 
 hist(apply(nb_boot_all, 1, mean))
+
+## Y and the A and H should be the three inputs and it outputs the NB 
+
+
+
+
+## make the thresholds smaller 0.0001
+
+## only interested in thresholds (h(x)) in the middle of this distribution from the fifth percentile of h to the 95th percentile of h 
+
+## add a proportion 
+
+
+
+
+
+
 
 
 
