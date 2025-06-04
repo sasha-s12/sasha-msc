@@ -215,11 +215,13 @@ lines(Ts, lower_band_all, col = "blue", lty = 2)
 lines(Ts, upper_band_all, col = "blue", lty = 2)
 
 
- ## Proportion overlay
-par(new = TRUE)  
+## Proportion overlay
+par(new = TRUE)
 plot(Ts, res[, 4], type = "l", col = "darkgreen", lwd = 2,
-     axes = FALSE, ylim = c(0, 1))
-axis(4)  
+     axes = FALSE, xlab = "", ylab = "", ylim = c(0, 1))
+axis(4)
+
+
 
 
 
