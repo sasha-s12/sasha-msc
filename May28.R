@@ -1,12 +1,12 @@
+#Reproducibility 
+set.seed(123) 
 
-set.seed(123)
-
+#Packages used 
 library(predtools)
 library(dplyr)
 library(ggplot2)
-library(patchwork)
 
-N <- 1000 #Sample size of the future study 
+##### Setting up the Data #####
 
 data(gusto)
 
@@ -15,14 +15,14 @@ gusto$Y <- gusto$day30 ## Outcome
 
 ## Coding the treatment groups ##
 gusto$trt <- ifelse(gusto$tx == "tPA", 1, 0) ## 1 for TPA 0 for other (SKA or SKA combo)
-gusto$trt <- factor(gusto$trt)
+gusto$trt <- factor(gusto$trt) 
 
 data_us <- gusto[gusto$regl %in% c(1, 7, 9, 10, 11, 12, 14, 15),] 
 data_other <- gusto[!gusto$regl %in% c(1, 7, 9, 10, 11, 12, 14, 15),]
 
 dev_data <- data_other ## training data 
-val_data <- data_us
-val_data$trt_true <- val_data$trt
+val_data <- data_us ## validation data 
+val_data$trt_true <- val_data$trt ## vector trt_true contains the true treatment assignment assigned via RCT
 
 ##### Creating the TBP ####
 
@@ -38,21 +38,28 @@ drop1(TBP_model)
 
 ##### Making some PREDICTIONS!!! ####
 
-# Making counterfactual datasets: 
+# First we need to figure out what the CATE is, and to do so we need the counterfactual data sets
 
+# Making counter factual data sets: 
+
+# The treatment is not applied 
 val_data_SKA <- val_data ## coded as 0
 val_data_SKA$trt <- factor(0, levels = c(0, 1))
 
+# The treatment is applied 
 val_data_TPA <- val_data ## coded as 1
 val_data_TPA$trt <- factor(1, levels = c(0, 1))
 
-# predicting the 30-day mortality 
+# predicting the 30-day mortality:
+
+# treatment is not applied 
 pred_mort_SKA <- predict(TBP_model, newdata = val_data_SKA, type = "response") 
 
+# treatment is applied 
 pred_mort_TPA <- predict(TBP_model, newdata = val_data_TPA, type = "response")
 
 # predicting the CATE/TBP 
-val_data$TBP <- pred_mort_SKA - pred_mort_TPA ### E[Y(0) - Y(1)]
+val_data$TBP <- pred_mort_SKA - pred_mort_TPA ### E[Y(0)] - E[Y(1)]
 val_data$pred_mort_SKA <- pred_mort_SKA
 val_data$pred_mort_TPA <- pred_mort_TPA
 
@@ -60,18 +67,17 @@ val_data$pred_mort_TPA <- pred_mort_TPA
 
 TBP_eval <- val_data %>%
   select(
-    treatment_received = trt_true, # group (control/treatment)
-    observed_event = Y,     # mortality (0 or 1)
-    risk_TPA = pred_mort_TPA, # predicted risk if treated
-    risk_SKA = pred_mort_SKA, # predicted risk if not treated
+    treatment_received = trt_true, # group (control/treatment) This is our "A"
+    observed_event = Y,     # mortality (0 or 1) This is our outcome 
+    #risk_TPA = pred_mort_TPA, # predicted risk if treated
+    #risk_SKA = pred_mort_SKA, # predicted risk if not treated
     predicted_benefit = TBP  # risk reduction = SKA - TPA
   )
 
-mean(TBP_eval$predicted_benefit)
+mean_pred_ben <- mean(TBP_eval$predicted_benefit) # is this where we expect to see the treat all be better than the model or something?
 
-#### Mohsen code (2025.05.21) ####
 
-calc_nb <- function(T , TBP_eval)
+calc_nb <- function(T, TBP_eval)
   
   {
   
@@ -91,13 +97,18 @@ calc_nb <- function(T , TBP_eval)
   # Among Rz = 1 this gives the proportion who did not receive treatment (A = 0) and developed the outcome, 
   # divided by total number untreated in that group
   
-  c(NB_none=0, NB_model=p_treat*(ATT-T), NB_all=ATE-T) 
+  prop_treated <- nrow(treated) / nrow(TBP_eval) ## proportion of people treated at the threshold
+  
+  c(NB_none=0, NB_model=p_treat*(ATT-T), NB_all=ATE-T, prop_treated = prop_treated) 
   
 }
 
-Ts <- (0:100)/1000
+Ts <- seq(-0.0055, 0.0179, by = 0.0001)  # vector of thresholds 
 
-res <- matrix(NA, nrow=length(Ts), ncol=3)
+Ts
+
+res <- matrix(NA, nrow=length(Ts), ncol=4)
+colnames(res) <- c("NB_None", "NB_Model", "NB_All", "Prop_treated")
 
 for(i in 1:length(Ts))
   {
@@ -106,18 +117,17 @@ for(i in 1:length(Ts))
   
 }
 
-plot(Ts, res[,2], type='l', col='red'); lines(Ts, res[,3])
-
-
 ### End: Mohsen code
 
+quantile(TBP_eval$predicted_benefit, probs = c(0.05, 0.95))
 
+hist(TBP_eval$predicted_benefit)
 
 #### Attempting Bootstrapped Confidence Bands 05.27.2024 ####
 
 B <- 1000 # number of iterations
 
-Ts <- (0:100)/100000  # vector of thresholds 
+Ts <- seq(-0.0055, 0.0179, by = 0.0001)  # vector of thresholds 
 
 nb_boot_model <- matrix(NA, nrow = B, ncol = length(Ts))
 nb_boot_all <- matrix(NA, nrow = B, ncol = length(Ts))
@@ -144,8 +154,8 @@ for (b in 1:B) {
     select(
       treatment_received = trt_true,
       observed_event = Y,
-      risk_TPA = pred_mort_TPA,
-      risk_SKA = pred_mort_SKA,
+      #risk_TPA = pred_mort_TPA,
+      #risk_SKA = pred_mort_SKA,
       predicted_benefit = TBP
     )
   
@@ -165,10 +175,11 @@ upper_band_model <- apply(nb_boot_model, 2, quantile, probs = 0.975, na.rm = TRU
 lower_band_all <- apply(nb_boot_all, 2, quantile, probs = 0.025)
 upper_band_all <- apply(nb_boot_all, 2, quantile, probs = 0.975)
 
-
+ 
 plot(Ts, res[, 2], type = "l", col = "red", lwd = 2,
-     ylim = c(-0.5, 0.09),
-     ylab = "Net Benefit", xlab = "Threshold")
+     ylab = "Net Benefit", xlab = "Threshold",
+     ylim = c(-0.05, 0.045))
+
 
 #NB_model
 lines(Ts, lower_band_model, col = "red", lty = 2)
@@ -179,26 +190,40 @@ lines(Ts, res[, 3], col = "blue", lwd = 2)
 lines(Ts, lower_band_all, col = "blue", lty = 2)
 lines(Ts, upper_band_all, col = "blue", lty = 2)
  
-hist(TBP_eval[,5])
 
-hist(apply(nb_boot_all, 1, mean))
+#hist(apply(nb_boot_all, 1, mean)) ## histogram of the net benefit for treat all strategy after bootstrapping 
 
-## Y and the A and H should be the three inputs and it outputs the NB 
+#hist(apply(nb_boot_model, 1, mean)) ## histogram of the net benefit for treating by model strategy after bootstrapping 
+
+## overlay proportion 
+
+# Net benefit model
+plot(Ts, res[, 2], type = "l", col = "red", lwd = 2,
+     
+     ylab = "Net Benefit", xlab = "Threshold", 
+     ylim = c(-0.012, 0.03))
+
+### 95% confidence bands
+lines(Ts, lower_band_model, col = "red", lty = 2)
+lines(Ts, upper_band_model, col = "red", lty = 2)
+
+# Net Benefit treat all 
+lines(Ts, res[, 3], col = "blue", lwd = 2)
+
+# 95% confidence bands
+lines(Ts, lower_band_all, col = "blue", lty = 2)
+lines(Ts, upper_band_all, col = "blue", lty = 2)
+
+
+ ## Proportion overlay
+par(new = TRUE)  
+plot(Ts, res[, 4], type = "l", col = "darkgreen", lwd = 2,
+     axes = FALSE, ylim = c(0, 1))
+axis(4)  
 
 
 
 
-## make the thresholds smaller 0.0001
 
-## only interested in thresholds (h(x)) in the middle of this distribution from the fifth percentile of h to the 95th percentile of h 
-
-## add a proportion 
-
-
-
-
-
-
-
-
-
+  
+  
