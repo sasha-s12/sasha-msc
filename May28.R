@@ -46,6 +46,7 @@ drop1(TBP_model)
 val_data_SKA <- val_data ## coded as 0
 val_data_SKA$trt <- factor(0, levels = c(0, 1))
 
+
 # The treatment is applied 
 val_data_TPA <- val_data ## coded as 1
 val_data_TPA$trt <- factor(1, levels = c(0, 1))
@@ -103,7 +104,7 @@ calc_nb <- function(T, TBP_eval)
   
 }
 
-Ts <- seq(-0.0055, 0.0179, by = 0.0001)  # vector of thresholds 
+Ts <- sort(unique(TBP_eval$predicted_benefit))
 
 Ts
 
@@ -125,9 +126,7 @@ hist(TBP_eval$predicted_benefit)
 
 #### Attempting Bootstrapped Confidence Bands 05.27.2024 ####
 
-B <- 1000 # number of iterations
-
-Ts <- seq(-0.0055, 0.0179, by = 0.0001)  # vector of thresholds 
+B <- 1 # number of iterations
 
 nb_boot_model <- matrix(NA, nrow = B, ncol = length(Ts))
 nb_boot_all <- matrix(NA, nrow = B, ncol = length(Ts))
@@ -177,8 +176,7 @@ upper_band_all <- apply(nb_boot_all, 2, quantile, probs = 0.975)
 
  
 plot(Ts, res[, 2], type = "l", col = "red", lwd = 2,
-     ylab = "Net Benefit", xlab = "Threshold",
-     ylim = c(-0.05, 0.045))
+     ylab = "Net Benefit", xlab = "Threshold")
 
 
 #NB_model
@@ -220,7 +218,6 @@ par(new = TRUE)
 plot(Ts, res[, 4], type = "l", col = "darkgreen", lwd = 2,
      axes = FALSE, xlab = "", ylab = "", ylim = c(0, 1))
 axis(4)
-
 
 
 
