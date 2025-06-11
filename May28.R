@@ -176,18 +176,17 @@ upper_band_all <- apply(nb_boot_all, 2, quantile, probs = 0.975)
 
  
 plot(Ts, res[, 2], type = "l", col = "red", lwd = 2,
-     ylab = "Net Benefit", xlab = "Threshold")
+     xlab = "Threshold", ylab = "Net Benefit")
 
-
-#NB_model
+# NB_model
 lines(Ts, lower_band_model, col = "red", lty = 2)
 lines(Ts, upper_band_model, col = "red", lty = 2)
 
-# NB_all 
+# NB_all
 lines(Ts, res[, 3], col = "blue", lwd = 2)
 lines(Ts, lower_band_all, col = "blue", lty = 2)
 lines(Ts, upper_band_all, col = "blue", lty = 2)
- 
+
 
 #hist(apply(nb_boot_all, 1, mean)) ## histogram of the net benefit for treat all strategy after bootstrapping 
 
@@ -198,8 +197,7 @@ lines(Ts, upper_band_all, col = "blue", lty = 2)
 # Net benefit model
 plot(Ts, res[, 2], type = "l", col = "red", lwd = 2,
      
-     ylab = "Net Benefit", xlab = "Threshold", 
-     ylim = c(-0.012, 0.03))
+     ylab = "Net Benefit", xlab = "Threshold")
 
 ### 95% confidence bands
 lines(Ts, lower_band_model, col = "red", lty = 2)
@@ -212,6 +210,8 @@ lines(Ts, res[, 3], col = "blue", lwd = 2)
 lines(Ts, lower_band_all, col = "blue", lty = 2)
 lines(Ts, upper_band_all, col = "blue", lty = 2)
 
+
+abline(h=0,col="orange")
 
 ## Proportion overlay
 par(new = TRUE)
